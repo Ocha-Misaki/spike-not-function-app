@@ -1,42 +1,62 @@
-name: Claude Code Review
+name: Claude Code
 
 on:
-  pull_request:
-    types: [opened, synchronize, ready_for_review]
   issue_comment:
     types: [created]
-
-concurrency:
-  group: |
-    ${{
-      github.event_name == 'pull_request' && format('{0}--pr-{1}', github.workflow, github.event.pull_request.number) ||
-      contains(github.event.comment.body, '/review') && format('{0}--pr-{1}', github.workflow, github.event.issue.number) ||
-      format('{0}--comment-{1}', github.workflow, github.event.comment.id)
-    }}
-  cancel-in-progress: true
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
 
 jobs:
-  claude-review:
+  claude:
     if: |
-      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '/review')) ||
-      (
-        github.event_name == 'pull_request' &&
-        !github.event.pull_request.draft &&
-        !contains(github.event.pull_request.title, '[skip review]') &&
-        !contains(github.event.pull_request.title, '[WIP]') &&
-        !contains(github.event.pull_request.title, '[wip]') &&
-        !(github.event.pull_request.head.ref == 'release-candidate' && github.event.pull_request.base.ref == 'main')
-      )
-
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+    runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
       issues: write
       id-token: write
+      actions: read # Required for Claude to read CI results on PRs
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-    uses: SonicGarden/workflows/.github/workflows/claude-review.yml@main
-    with:
-      guideline_files: "docs/agent/code-review.md"
-      minimum_changed_lines: 10
-    secrets:
-      anthropic_api_key: ${{ secrets.ANTHROPIC_CODE_REVIEW_API_KEY }}
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            # コードレビューガイドライン
+            ## 概要
+            あなたの役割は、非常に経験豊富なソフトウェアエンジニアとして、コードの一部を徹底的にレビューし、以下の観点から問題を検出し、具体的な改善案を提供することです：
+
+            ### 重要度：高（必ず指摘）
+              - **動作しないコード**: 構文エラー、未定義変数、型エラー、ヌルポインタ参照の可能性
+              - **ロジックエラー**: 無限ループ、到達不可能なコード、条件分岐の誤り
+              - **セキュリティ脆弱性**: SQLインジェクション、XSS、CSRF、認証・認可の問題
+              - **重大なパフォーマンス問題**: N+1クエリ、メモリリーク、非効率なアルゴリズム
+              - **データ競合**: 競合状態、デッドロック、不適切な並行処理
+
+            ### レビュー方針
+              - コードが正しく動作するかを最優先で判定してください
+              - 軽微なコードスタイルの問題は無視してください
+              - 「問題ありません」のようなコメントは避けてください
+
+
+            ## 望んでいるレビューの出力結果
+
+            最終的にコードが動くアプリケーションになっているか、Markdown形式で記載してください：
+            - 動作しないコードやロジックエラーがないか
+            - Ruby on Railsベストプラクティスに従っているか
+            - 各項目について、問題があれば具体的に指摘し、なければ「問題ありません」と記載してください。
+            - 「```」のコードブロックは不要です。
