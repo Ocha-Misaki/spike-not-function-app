@@ -95,14 +95,14 @@ jobs:
       - name: Parse Claude Execution File and Check Conclusion
         id: parse_and_fail
         run: |
+          EXECUTION_FILE="${{ steps.claude.outputs.execution_file }}"
+
           echo "=== Claude Execution File ==="
-          # ファイルの内容表示（デバッグ用）
-          cat "${{ steps.claude.outputs.execution_file }}" || {
+          cat "$EXECUTION_FILE" || {
             echo "⚠️ エラー: Claudeの実行ファイルが見つかりません。"
             exit 1
           }
 
-          # JSONファイルから 'conclusion' の値を抽出
           conclusion=$(jq -r '
             if type == "object" then
               .conclusion // "unknown"
@@ -110,8 +110,8 @@ jobs:
               .[0].conclusion // "unknown"
             else
               "unknown"
-            fi
-          ' "${{ steps.claude.outputs.execution_file }}")
+            end
+          ' "$EXECUTION_FILE")
 
           echo "Claudeレビュー結論: $conclusion"
 
@@ -122,6 +122,6 @@ jobs:
             echo "🟢 レビュー結果が 'success' です。処理を続行します。"
           else
             echo "⚠️ 結論の値が 'success' または 'failure' ではありません: $conclusion"
-            # 不正な結論も失敗と見なす場合はここで exit 1 を実行
+            # 不正な結論も失敗と見なす
             exit 1
           fi
