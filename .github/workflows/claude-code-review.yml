@@ -97,21 +97,26 @@ jobs:
         run: |
           EXECUTION_FILE="${{ steps.claude.outputs.execution_file }}"
 
-          echo "=== Claude Execution File ==="
-          cat "$EXECUTION_FILE" || {
-            echo "⚠️ エラー: Claudeの実行ファイルが見つかりません。"
-            exit 1
-          }
+          echo "=== Claude Execution File (RAW) ==="
+          cat "$EXECUTION_FILE"
+          echo "==================================="
 
-          conclusion=$(jq -r '
-            if type == "object" then
-              .conclusion // "unknown"
-            elif type == "array" and length > 0 then
-              .[0].conclusion // "unknown"
-            else
-              "unknown"
-            end
-          ' "$EXECUTION_FILE")
+          JSON_CONTENT=$(sed -n '/```json/,/```/p' "$EXECUTION_FILE" | grep -v '```')
+
+          # JSONコンテンツが空でないことを確認
+          if [ -z "$JSON_CONTENT" ]; then
+            echo "🔴 エラー: JSONコードブロックが見つかりませんでした。レビュー出力を確認してください。"
+            exit 1
+          fi
+
+          echo "=== JSON Content Extracted ==="
+          echo "$JSON_CONTENT"
+          echo "=============================="
+
+          # 抽出したJSONから conclusion を jq で安全に抽出
+          conclusion=$(echo "$JSON_CONTENT" | jq -r '
+            .conclusion // "unknown"
+          ')
 
           echo "Claudeレビュー結論: $conclusion"
 
