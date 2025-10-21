@@ -75,14 +75,8 @@ jobs:
 
             ---
             ## 🧾 出力フォーマット（この形式を厳守）
-            - あなたの最終出力は、必ず以下のJSON形式にしてください。
-              例：
-              {
-                "動作しないコードがあるか": "はい",
-                "ロジックエラーがあるか": "いいえ",
-                "Ruby on Rails に沿ったコードが書かれていないか": "はい",
-                "conclusion": "failure"
-              }
+            - あなたの最終出力は、${{ steps.claude.outputs.conclusion }} に定義されることを想定しています。
+            - 動作しているコードの場合は "success"、動作しないコードの場合は "failure" を返してください。
 
             ### コメント
             （ここに抽象的なアドバイスや改善の方向性を記述する。ただし具体的なコード例は書かない）
@@ -92,41 +86,60 @@ jobs:
             - すべてのチェック項目に基づき、全て「いいえ」なら conclusion を "success"、1つでも「はい」がある場合は "failure" にしてください。
             - 上記JSON以外の文は出力しないでください。
 
-      - name: Parse Claude Execution File and Check Conclusion
-        id: parse_and_fail
+      # - name: Parse Claude Execution File and Check Conclusion
+      #   id: parse_and_fail
+      #   run: |
+      #     EXECUTION_FILE="${{ steps.claude.outputs.execution_file }}"
+
+      #     echo "=== Claude Execution File (RAW) ==="
+      #     cat "$EXECUTION_FILE"
+      #     echo "==================================="
+
+      #     JSON_CONTENT=$(sed -n '/```json/,/```/p' "$EXECUTION_FILE" | grep -v '```')
+
+      #     # JSONコンテンツの検証
+      #     if [ -z "$JSON_CONTENT" ]; then
+      #       echo "🔴 エラー: JSONコードブロックが見つかりませんでした。Claudeの出力形式を確認してください。"
+      #       # JSONが見つからない場合は、ジョブを失敗させる
+      #       exit 1
+      #     fi
+
+      #     echo "=== JSON Content Extracted ==="
+      #     echo "$JSON_CONTENT"
+      #     echo "=============================="
+
+      #     # 抽出した純粋なJSONテキストを jq に渡し、conclusionを抽出
+      #     # JSON_CONTENTは有効なJSONオブジェクトであるはずなので、シンプルな jq フィルタを使用
+      #     conclusion=$(echo "$JSON_CONTENT" | jq -r '
+      #       .conclusion // "unknown"
+      #     ')
+
+      #     if [ "$conclusion" = "unknown" ]; then
+      #       echo "🔴 エラー: JSONは抽出できましたが、 'conclusion' フィールドが見つかりません。"
+      #       exit 1
+      #     fi
+
+      #     echo "Claudeレビュー結論: $conclusion"
+
+      #     # 結論が 'failure' なら、非ゼロの終了コードを返してジョブを失敗させる
+      #     if [ "$conclusion" = "failure" ]; then
+      #       echo "🔴 レビュー結果が 'failure' です。このジョブを失敗としてマークします。"
+      #       exit 1
+      #     elif [ "$conclusion" = "success" ]; then
+      #       echo "🟢 レビュー結果が 'success' です。処理を続行します。"
+      #     else
+      #       echo "⚠️ 結論の値が 'success' または 'failure' ではありません: $conclusion"
+      #       exit 1
+      #     fi
+
+      #     echo "conclusion=$conclusion" >> $GITHUB_OUTPUT
+
+      - name: Check Review Conclusion and Fail
         run: |
-          EXECUTION_FILE="${{ steps.claude.outputs.execution_file }}"
+          # Claude Actionが出力するカスタムの値（レビュー結果）をチェック
+          CUSTOM_CONCLUSION="${{ steps.claude.outputs.conclusion }}"
 
-          echo "=== Claude Execution File (RAW) ==="
-          cat "$EXECUTION_FILE"
-          echo "==================================="
-
-          JSON_CONTENT=$(sed -n '/```json/,/```/p' "$EXECUTION_FILE" | grep -v '```')
-
-          # JSONコンテンツが空でないことを確認
-          if [ -z "$JSON_CONTENT" ]; then
-            echo "🔴 エラー: JSONコードブロックが見つかりませんでした。レビュー出力を確認してください。"
-            exit 1
-          fi
-
-          echo "=== JSON Content Extracted ==="
-          echo "$JSON_CONTENT"
-          echo "=============================="
-
-          # 抽出したJSONから conclusion を jq で安全に抽出
-          conclusion=$(echo "$JSON_CONTENT" | jq -r '
-            .conclusion // "unknown"
-          ')
-
-          echo "Claudeレビュー結論: $conclusion"
-
-          if [ "$conclusion" = "failure" ]; then
-            echo "🔴 レビュー結果が 'failure' です。このジョブを失敗としてマークします。"
-            exit 1
-          elif [ "$conclusion" = "success" ]; then
-            echo "🟢 レビュー結果が 'success' です。処理を続行します。"
-          else
-            echo "⚠️ 結論の値が 'success' または 'failure' ではありません: $conclusion"
-            # 不正な結論も失敗と見なす
-            exit 1
+          if [ "$CUSTOM_CONCLUSION" = "failure" ]; then
+            echo "::error::Claude review rejected with status: $CUSTOM_CONCLUSION"
+            exit 1 # <--- これでジョブを失敗させる
           fi
