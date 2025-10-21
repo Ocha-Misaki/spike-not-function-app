@@ -35,7 +35,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Run Claude Code
         id: claude
@@ -97,18 +97,8 @@ jobs:
         run: |
           echo "=== Claude Execution File ==="
           cat "${{ steps.claude.outputs.execution_file }}" || echo "⚠️ ファイルが存在しません"
+          echo "============================="
+          cat "${{ steps.claude.outputs.execution_file }}"
+          echo "============================="
           conclusion=$(jq -r '.conclusion // "unknown"' "${{ steps.claude.outputs.execution_file }}")
-          echo "結論: $conclusion"
           echo "conclusion=$conclusion" >> $GITHUB_OUTPUT
-
-      - name: Debug Claude Outputs
-        run: |
-          echo "=== Claude Action Outputs ==="
-          echo '${{ toJSON(steps.claude.outputs) }}'
-      - name: Success Claude Code Review
-        if: steps.parse.outputs.conclusion == 'success'
-        run: echo "Claudeの実行が成功しました"
-
-      - name: Failure Claude Code Review
-        if: steps.parse.outputs.conclusion == 'failure'
-        run: echo "Claudeの実行が失敗しました"
