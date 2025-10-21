@@ -92,16 +92,23 @@ jobs:
             - すべてのチェック項目に基づき、全て「いいえ」なら conclusion を "success"、1つでも「はい」がある場合は "failure" にしてください。
             - 上記JSON以外の文は出力しないでください。
 
-      # - name: Parse Claude Output
-      #   id: parse
-      #   run: |
-      #     echo "Claude Output: ${{ steps.claude.outputs.text }}"
-      #     if echo "${{ steps.claude.outputs.text }}" | grep -q '"conclusion": "failure"'; then
-      #       echo "conclusion=failure" >> $GITHUB_OUTPUT
-      #     else
-      #       echo "conclusion=success" >> $GITHUB_OUTPUT
-      #     fi
+      - name: Parse Claude Execution File
+        id: parse
+        run: |
+          echo "=== Claude Execution File ==="
+          cat "${{ steps.claude.outputs.execution_file }}" || echo "⚠️ ファイルが存在しません"
+          conclusion=$(jq -r '.conclusion // "unknown"' "${{ steps.claude.outputs.execution_file }}")
+          echo "結論: $conclusion"
+          echo "conclusion=$conclusion" >> $GITHUB_OUTPUT
+
       - name: Debug Claude Outputs
         run: |
           echo "=== Claude Action Outputs ==="
           echo '${{ toJSON(steps.claude.outputs) }}'
+      - name: Success Claude Code Review
+        if: steps.parse.outputs.conclusion == 'success'
+        run: echo "Claudeの実行が成功しました"
+
+      - name: Failure Claude Code Review
+        if: steps.parse.outputs.conclusion == 'failure'
+        run: echo "Claudeの実行が失敗しました"
