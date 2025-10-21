@@ -97,8 +97,16 @@ jobs:
         run: |
           echo "=== Claude Execution File ==="
           cat "${{ steps.claude.outputs.execution_file }}" || echo "⚠️ ファイルが存在しません"
-          echo "============================="
-          cat "${{ steps.claude.outputs.execution_file }}"
-          echo "============================="
-          conclusion=$(jq -r '.conclusion // "unknown"' "${{ steps.claude.outputs.execution_file }}")
+
+          conclusion=$(jq -r '
+            if type == "object" then
+              .conclusion // "unknown"
+            elif type == "array" and length > 0 then
+              .[0].conclusion // "unknown"
+            else
+              "unknown"
+            end
+          ' "${{ steps.claude.outputs.execution_file }}")
+
+          echo "結論: $conclusion"
           echo "conclusion=$conclusion" >> $GITHUB_OUTPUT
