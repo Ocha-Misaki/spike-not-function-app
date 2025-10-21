@@ -43,7 +43,47 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
-            successという文字列を結果として出力してください。
+            # コードレビューガイドライン
+
+            あなたは経験豊富なソフトウェアエンジニアとして、Pull Request に含まれるコードをレビューします。
+            対象は**駆け出しエンジニアが作成したコード**であり、主に「コードが正しく動作するか」に焦点を当ててください。
+
+            ---
+            ## 🚫 禁止事項
+            - 絶対に**具体的なコード例や修正コード**を出力しないでください。
+            - レビューコメントは常に**抽象的な指摘や方向性**に留めてください。
+
+            ---
+            ## 🔍 レビュー観点
+
+            ### 重要度：高（必ず指摘）
+            - **動作しないコード**
+              - 構文エラー、未定義メソッド、型ミスマッチ、マイグレーション不整合など
+            - **ロジックエラー**
+              - 無限ループ、条件分岐の誤り、境界値処理ミスなど
+
+            ### 優先度の低い項目（コメント不要）
+            - インデントや改行などの軽微なスタイル
+            - コメントの有無や命名規則の細部
+
+            ---
+            ## 🧭 レビュー方針
+            - 「コードが正しく動作するか」を最優先で判定する。
+            - コードのスタイルや最適化は優先しない。
+            - テスト結果や明らかなエラーに基づいて判断する。
+            - 目的は**動作確認に基づいたレビュー**であること。
+
+            ---
+            ## 🧾 出力フォーマット（この形式を厳守）
+            - あなたの最終出力は、必ず以下のテキストにしてください。
+              例：
+                - success
+                もしくは
+                - failure
+
+            ---
+            ## ✅ 結論
+            コードが動いていたらsuccess, 失敗していたらfailureのテキストだけを返してください。
 
       - name: Parse Claude Execution File and Check Conclusion
         id: parse_and_fail
@@ -53,6 +93,30 @@ jobs:
           echo "=== Claude Execution File (RAW) ==="
           cat "$EXECUTION_FILE"
           echo "==================================="
+
+          RESULT=$(cat "$EXECUTION_FILE" | jq -r '.[] | select(.type=="result") | .result')
+          echo "=== Extracted Result ==="
+          echo "$RESULT"
+          echo "========================"
+
+          if [ "$RESULT" = "unknown" ]; then
+            echo "🔴 エラー: JSONは抽出できましたが、 'conclusion' フィールドが見つかりません。"
+            exit 1
+          fi
+
+          echo "Claudeレビュー結論: $RESULT"
+
+
+          # 結論が 'failure' なら、非ゼロの終了コードを返してジョブを失敗させる
+          if [ "$RESULT" = "failure" ]; then
+            echo "🔴 レビュー結果が 'failure' です。このジョブを失敗としてマークします。"
+            exit 1
+          elif [ "$RESULT" = "success" ]; then
+            echo "🟢 レビュー結果が 'success' です。処理を続行します。"
+          else
+            echo "⚠️ 結論の値が 'success' または 'failure' ではありません: $RESULT"
+            exit 1
+          fi
 
       # - name: Parse Claude Execution File and Check Conclusion
       #   id: parse_and_fail
@@ -75,7 +139,7 @@ jobs:
       #     echo "=== JSON Content Extracted ==="
       #     echo "$JSON_CONTENT"
       #     echo "=============================="
-          
+
       #     # 抽出した純粋なJSONテキストを jq に渡し、conclusionを抽出
       #     # JSON_CONTENTは有効なJSONオブジェクトであるはずなので、シンプルな jq フィルタを使用
       #     conclusion=$(echo "$JSON_CONTENT" | jq -r '
