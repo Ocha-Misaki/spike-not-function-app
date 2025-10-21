@@ -92,12 +92,17 @@ jobs:
             - すべてのチェック項目に基づき、全て「いいえ」なら conclusion を "success"、1つでも「はい」がある場合は "failure" にしてください。
             - 上記JSON以外の文は出力しないでください。
 
-      - name: Parse Claude Execution File
-        id: parse
+      - name: Parse Claude Execution File and Check Conclusion
+        id: parse_and_fail
         run: |
           echo "=== Claude Execution File ==="
-          cat "${{ steps.claude.outputs.execution_file }}" || echo "⚠️ ファイルが存在しません"
+          # ファイルの内容表示（デバッグ用）
+          cat "${{ steps.claude.outputs.execution_file }}" || {
+            echo "⚠️ エラー: Claudeの実行ファイルが見つかりません。"
+            exit 1
+          }
 
+          # JSONファイルから 'conclusion' の値を抽出
           conclusion=$(jq -r '
             if type == "object" then
               .conclusion // "unknown"
@@ -105,8 +110,18 @@ jobs:
               .[0].conclusion // "unknown"
             else
               "unknown"
-            end
+            fi
           ' "${{ steps.claude.outputs.execution_file }}")
 
-          echo "結論: $conclusion"
-          echo "conclusion=$conclusion" >> $GITHUB_OUTPUT
+          echo "Claudeレビュー結論: $conclusion"
+
+          if [ "$conclusion" = "failure" ]; then
+            echo "🔴 レビュー結果が 'failure' です。このジョブを失敗としてマークします。"
+            exit 1
+          elif [ "$conclusion" = "success" ]; then
+            echo "🟢 レビュー結果が 'success' です。処理を続行します。"
+          else
+            echo "⚠️ 結論の値が 'success' または 'failure' ではありません: $conclusion"
+            # 不正な結論も失敗と見なす場合はここで exit 1 を実行
+            exit 1
+          fi
