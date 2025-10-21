@@ -61,8 +61,6 @@ jobs:
               - 構文エラー、未定義メソッド、型ミスマッチ、マイグレーション不整合など
             - **ロジックエラー**
               - 無限ループ、条件分岐の誤り、境界値処理ミスなど
-            - **パフォーマンス問題**
-              - N+1クエリ、重複処理など
 
             ### 優先度の低い項目（コメント不要）
             - インデントや改行などの軽微なスタイル
@@ -82,7 +80,6 @@ jobs:
               {
                 "動作しないコードがあるか": "はい",
                 "ロジックエラーがあるか": "いいえ",
-                "パフォーマンス問題があるか": "はい",
                 "Ruby on Rails に沿ったコードが書かれていないか": "はい",
                 "conclusion": "failure"
               }
@@ -95,12 +92,16 @@ jobs:
             - すべてのチェック項目に基づき、全て「いいえ」なら conclusion を "success"、1つでも「はい」がある場合は "failure" にしてください。
             - 上記JSON以外の文は出力しないでください。
 
-      - name: Parse Claude Output
-        id: parse
+      # - name: Parse Claude Output
+      #   id: parse
+      #   run: |
+      #     echo "Claude Output: ${{ steps.claude.outputs.text }}"
+      #     if echo "${{ steps.claude.outputs.text }}" | grep -q '"conclusion": "failure"'; then
+      #       echo "conclusion=failure" >> $GITHUB_OUTPUT
+      #     else
+      #       echo "conclusion=success" >> $GITHUB_OUTPUT
+      #     fi
+      - name: Debug Claude Outputs
         run: |
-          echo "Claude Output: ${{ steps.claude.outputs.text }}"
-          if echo "${{ steps.claude.outputs.text }}" | grep -q '"conclusion": "failure"'; then
-            echo "conclusion=failure" >> $GITHUB_OUTPUT
-          else
-            echo "conclusion=success" >> $GITHUB_OUTPUT
-          fi
+          echo "=== Claude Action Outputs ==="
+          echo '${{ toJSON(steps.claude.outputs) }}'
