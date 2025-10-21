@@ -77,9 +77,7 @@ jobs:
             ## 🧾 出力フォーマット（この形式を厳守）
             - あなたの最終出力は、必ず以下のテキストにしてください。
               例：
-                - success
-                もしくは
-                - failure
+                - 結論: success
 
             ---
             ## ✅ 結論
@@ -95,26 +93,19 @@ jobs:
           echo "==================================="
 
           RESULT=$(cat "$EXECUTION_FILE" | jq -r '.[] | select(.type=="result") | .result')
-          echo "=== Extracted Result ==="
-          echo "$RESULT"
+          CONCLUSION=$(echo "$RESULT" | grep -Eo '(結論|conclusion)\s*[:：]\s*(success|failure)' | grep -Eo '(success|failure)')
+          echo "=== Extracted Conclusion ==="
+          echo "$CONCLUSION"
           echo "========================"
 
-          if [ "$RESULT" = "unknown" ]; then
-            echo "🔴 エラー: JSONは抽出できましたが、 'conclusion' フィールドが見つかりません。"
-            exit 1
-          fi
-
-          echo "Claudeレビュー結論: $RESULT"
-
-
           # 結論が 'failure' なら、非ゼロの終了コードを返してジョブを失敗させる
-          if [ "$RESULT" = "failure" ]; then
+          if [ "$CONCLUSION" = "failure" ]; then
             echo "🔴 レビュー結果が 'failure' です。このジョブを失敗としてマークします。"
             exit 1
-          elif [ "$RESULT" = "success" ]; then
+          elif [ "$CONCLUSION" = "success" ]; then
             echo "🟢 レビュー結果が 'success' です。処理を続行します。"
           else
-            echo "⚠️ 結論の値が 'success' または 'failure' ではありません: $RESULT"
+            echo "⚠️ 結論の値が 'success' または 'failure' ではありません: $CONCLUSION"
             exit 1
           fi
 
