@@ -77,27 +77,30 @@ jobs:
 
             ---
             ## 🧾 出力フォーマット（この形式を厳守）
-
-            ### レビュー結果
-
-            - 動作しないコードがあるか: はい / いいえ
-            - ロジックエラーがあるか: はい / いいえ
-            - パフォーマンス問題があるか: はい / いいえ
-            - Ruby on Rails に沿ったコードが書かれているか: はい / いいえ
+            - あなたの最終出力は、必ず以下のJSON形式にしてください。
+              例：
+              {
+                "動作しないコードがあるか": "はい",
+                "ロジックエラーがあるか": "いいえ",
+                "パフォーマンス問題があるか": "はい",
+                "Ruby on Rails に沿ったコードが書かれていないか": "はい",
+                "conclusion": "failure"
+              }
 
             ### コメント
             （ここに抽象的なアドバイスや改善の方向性を記述する。ただし具体的なコード例は書かない）
 
             ---
             ## ✅ 結論
-            - すべての観点で問題がなければ `claude.outputs.conclusion` に `"success"` を設定
-            - いずれかに問題があれば `"failure"` を設定
+            - すべてのチェック項目に基づき、全て「いいえ」なら conclusion を "success"、1つでも「はい」がある場合は "failure" にしてください。
+            - 上記JSON以外の文は出力しないでください。
 
-      - name: Success Claude Code Review
-        if: steps.claude.outputs.conclusion == 'success'
+      - name: Parse Claude Output
+        id: parse
         run: |
-          echo "Claudeの実行が成功しました"
-      - name: Failure Claude Code Review
-        if: steps.claude.outputs.conclusion == 'failure'
-        run: |
-          echo "Claudeの実行が失敗しました"
+          echo "Claude Output: ${{ steps.claude.outputs.text }}"
+          if echo "${{ steps.claude.outputs.text }}" | grep -q '"conclusion": "failure"'; then
+            echo "conclusion=failure" >> $GITHUB_OUTPUT
+          else
+            echo "conclusion=success" >> $GITHUB_OUTPUT
+          fi
