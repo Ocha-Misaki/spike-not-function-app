@@ -104,6 +104,8 @@ jobs:
               }
             }
 
+            console.log("Extracted Review:", review);
+
             if (review) {
               github.rest.issues.createComment({
                 issue_number: context.issue.number,
