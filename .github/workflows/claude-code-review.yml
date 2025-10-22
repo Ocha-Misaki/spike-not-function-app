@@ -30,7 +30,7 @@ jobs:
       pull-requests: write
       issues: write
       id-token: write
-      actions: read # Required for Claude to read CI results on PRs
+      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -108,59 +108,3 @@ jobs:
             echo "⚠️ 結論の値が 'success' または 'failure' ではありません: $CONCLUSION"
             exit 1
           fi
-
-      # - name: Parse Claude Execution File and Check Conclusion
-      #   id: parse_and_fail
-      #   run: |
-      #     EXECUTION_FILE="${{ steps.claude.outputs.execution_file }}"
-
-      #     echo "=== Claude Execution File (RAW) ==="
-      #     cat "$EXECUTION_FILE"
-      #     echo "==================================="
-
-      #     JSON_CONTENT=$(sed -n '/```json/,/```/p' "$EXECUTION_FILE" | grep -v '```')
-
-      #     # JSONコンテンツの検証
-      #     if [ -z "$JSON_CONTENT" ]; then
-      #       echo "🔴 エラー: JSONコードブロックが見つかりませんでした。Claudeの出力形式を確認してください。"
-      #       # JSONが見つからない場合は、ジョブを失敗させる
-      #       exit 1
-      #     fi
-
-      #     echo "=== JSON Content Extracted ==="
-      #     echo "$JSON_CONTENT"
-      #     echo "=============================="
-
-      #     # 抽出した純粋なJSONテキストを jq に渡し、conclusionを抽出
-      #     # JSON_CONTENTは有効なJSONオブジェクトであるはずなので、シンプルな jq フィルタを使用
-      #     conclusion=$(echo "$JSON_CONTENT" | jq -r '
-      #       .conclusion // "unknown"
-      #     ')
-
-      #     if [ "$conclusion" = "unknown" ]; then
-      #       echo "🔴 エラー: JSONは抽出できましたが、 'conclusion' フィールドが見つかりません。"
-      #       exit 1
-      #     fi
-
-      #     echo "Claudeレビュー結論: $conclusion"
-
-      #     # 結論が 'failure' なら、非ゼロの終了コードを返してジョブを失敗させる
-      #     if [ "$conclusion" = "failure" ]; then
-      #       echo "🔴 レビュー結果が 'failure' です。このジョブを失敗としてマークします。"
-      #       exit 1
-      #     elif [ "$conclusion" = "success" ]; then
-      #       echo "🟢 レビュー結果が 'success' です。処理を続行します。"
-      #     else
-      #       echo "⚠️ 結論の値が 'success' または 'failure' ではありません: $conclusion"
-      #       exit 1
-      #     fi
-
-      # - name: Check Review Conclusion and Fail
-      #   run: |
-      #     # Claude Actionが出力するカスタムの値（レビュー結果）をチェック
-      #     CUSTOM_CONCLUSION="${{ steps.claude.outputs.conclusion }}"
-
-      #     if [ "$CUSTOM_CONCLUSION" = "failure" ]; then
-      #       echo "::error::Claude review rejected with status: $CUSTOM_CONCLUSION"
-      #       exit 1 # <--- これでジョブを失敗させる
-      #     fi
