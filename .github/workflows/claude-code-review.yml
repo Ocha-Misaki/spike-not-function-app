@@ -87,7 +87,7 @@ jobs:
             コードが動いていたらsuccess, 失敗していたらfailureのテキストと、レビューの結果のテキストだけを返してください。
 
       - name: Extract and Comment PR Review
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
