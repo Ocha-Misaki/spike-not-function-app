@@ -78,10 +78,11 @@ jobs:
             - あなたの最終出力は、必ず以下のテキストにしてください。
               例：
                 - 結論: success
+                - レビュー結果: コードは正しく動作しています。特に問題は見当たりません。(ここに具体的なレビュー内容を記載。コードの具体例は含めないこと)
 
             ---
             ## ✅ 結論
-            コードが動いていたらsuccess, 失敗していたらfailureのテキストだけを返してください。
+            コードが動いていたらsuccess, 失敗していたらfailureのテキストと、レビューの結果のテキストだけを返してください。
 
       - name: Extract and Comment PR Review
         uses: actions/github-script@v7
@@ -92,11 +93,8 @@ jobs:
             const executionFile = '${{ steps.claude.outputs.execution_file }}';
             const executionLog = JSON.parse(fs.readFileSync(executionFile, 'utf8'));
 
-            // Extract the review content from the execution log
-            // The execution log contains the full conversation including Claude's responses
             let review = '';
 
-            // Find the last assistant message which should contain the review
             for (let i = executionLog.length - 1; i >= 0; i--) {
               const logEntry = executionLog[i];
               const message = logEntry.message;
@@ -105,11 +103,11 @@ jobs:
                 const textParts = content
                   .filter(part => part.type === 'text' && typeof part.text === 'string' && part.text.trim().length > 0)
                   .map(part => part.text)
-                  .join('\n\n'); // 複数のテキストブロックは改行で区切る
+                  .join('\n\n');
 
                 if (textParts.length > 0) {
                   review = textParts;
-                  break; // レビューを見つけたのでループを終了
+                  break;
                 }
               }
             }
@@ -130,17 +128,9 @@ jobs:
         run: |
           EXECUTION_FILE="${{ steps.claude.outputs.execution_file }}"
 
-          echo "=== Claude Execution File (RAW) ==="
-          cat "$EXECUTION_FILE"
-          echo "==================================="
-
           RESULT=$(cat "$EXECUTION_FILE" | jq -r '.[] | select(.type=="result") | .result')
           CONCLUSION=$(echo "$RESULT" | grep -Eo '(結論|conclusion)\s*[:：]\s*(success|failure)' | grep -Eo '(success|failure)')
-          echo "=== Extracted Conclusion ==="
-          echo "$CONCLUSION"
-          echo "========================"
 
-          # 結論が 'failure' なら、非ゼロの終了コードを返してジョブを失敗させる
           if [ "$CONCLUSION" = "failure" ]; then
             echo "🔴 レビュー結果が 'failure' です。このジョブを失敗としてマークします。"
             exit 1
