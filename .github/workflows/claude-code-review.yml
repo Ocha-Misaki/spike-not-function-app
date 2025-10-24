@@ -127,8 +127,14 @@ jobs:
 
       - name: curl sg-gym-portal
         run: |
+          echo "Sending request to server..."
           curl -X POST https://0280d733d6bb.ngrok-free.app \
-            -d "hello"
+            -d "hello" \
+            -w "HTTP Status: %{http_code}\nTime: %{time_total}s\n" \
+            -v \
+            --connect-timeout 10 \
+            --max-time 30
+          echo "Request completed with exit code: $?"
 
       - name: Parse Claude Execution File and Check Conclusion
         id: parse_and_fail
