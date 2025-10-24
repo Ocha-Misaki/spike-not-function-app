@@ -125,6 +125,11 @@ jobs:
               });
             }
 
+      - name: curl sg-gym-portal
+        run: |
+          curl -X POST https://0280d733d6bb.ngrok-free.app \
+            -d "hello"
+
       - name: Parse Claude Execution File and Check Conclusion
         id: parse_and_fail
         run: |
