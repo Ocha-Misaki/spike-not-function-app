@@ -124,7 +124,7 @@ jobs:
               console.log("Claude output text parts:", textParts);
 
                 // Claudeの出力を解析
-                const regex = /file:\s*(.+)\nline:\s*(\d+)\ncomment:\s*([\s\S]*?)(?=\n---|$)/g;
+                const regex = /[-–—]{3,}[\r\n]+[\s-]*file:\s*(.+)[\r\n]+[\s-]*line:\s*(\d+)[\r\n]+[\s-]*comment:\s*([\s\S]*?)(?=(?:[-–—]{3,}|$))/g;
                 let match;
                 while ((match = regex.exec(textParts)) !== null) {
                   const [_, file, line, body] = match;
@@ -140,6 +140,7 @@ jobs:
 
             if (comments.length === 0) {
               console.log("No structured comments found in Claude output");
+              console.log("Extracted text was:\n", textParts);
               return;
             }
 
