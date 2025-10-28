@@ -76,6 +76,7 @@ jobs:
             ---
             ## 🧾 出力フォーマット（この形式を厳守）
             - あなたの最終出力は、必ず以下のテキストにしてください。
+            - もしコードに指摘事項がない場合は、「結論: success」のみを出力してください。
               例：
                 - 結論: success
                 - レビュー結果:
@@ -121,7 +122,6 @@ jobs:
                   .filter(part => part.type === 'text' && typeof part.text === 'string' && part.text.trim().length > 0)
                   .map(part => part.text)
                   .join('\n\n');
-              console.log("Claude output text parts:", textParts);
 
                 // Claudeの出力を解析
                 const regex = /[-–—]{3,}[\r\n]+[\s-]*file:\s*(.+)[\r\n]+[\s-]*line:\s*(\d+)[\r\n]+[\s-]*comment:\s*([\s\S]*?)(?=(?:[-–—]{3,}|$))/g;
@@ -139,12 +139,14 @@ jobs:
             }
 
             if (comments.length === 0) {
-              console.log("No structured comments found in Claude output");
-              console.log("Extracted text was:\n", textParts);
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: "### Claude 自動コードレビュー結果\n\nコードに問題は見つかりませんでした。お疲れ様でした!"
+              });
               return;
             }
-
-            console.log("Posting review comments:", comments);
 
             // PRレビューコメントを一括投稿
             await github.rest.pulls.createReview({
