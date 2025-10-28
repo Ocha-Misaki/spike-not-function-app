@@ -121,6 +121,7 @@ jobs:
                   .filter(part => part.type === 'text' && typeof part.text === 'string' && part.text.trim().length > 0)
                   .map(part => part.text)
                   .join('\n\n');
+              console.log("Claude output text parts:", textParts);
 
                 // Claudeの出力を解析
                 const regex = /file:\s*(.+)\nline:\s*(\d+)\ncomment:\s*([\s\S]*?)(?=\n---|$)/g;
@@ -150,7 +151,7 @@ jobs:
               repo: context.repo.repo,
               pull_number: prNumber,
               event: "COMMENT",
-              body: "### 🤖 Claude 自動コードレビュー結果\n\n以下のファイルにコメントを投稿しました。",
+              body: "### Claude 自動コードレビュー結果\n\n以下のファイルにコメントを投稿しました。",
               comments
             });
 
