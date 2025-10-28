@@ -100,7 +100,7 @@ jobs:
             - 各指摘を「file」「line」「comment」形式で出力してください。
 
       - name: Extract and Comment PR Review
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
